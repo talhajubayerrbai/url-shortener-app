@@ -42,6 +42,7 @@ stages:
       TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
+      TF_VAR_domain_name: url-shortener-app.udap.dev
     steps:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -55,18 +56,33 @@ stages:
       - name: Terraform Apply
         run: terraform apply -input=false -auto-approve
         working-directory: infra
-      - name: Get EC2 IP
-        id: get_ip
-        run: echo "ec2_ip=$(terraform output -raw ec2_public_ip)" >> "$GITHUB_OUTPUT"
-        working-directory: infra
-    outputs:
-      ec2_ip: ${{ steps.get_ip.outputs.ec2_ip }}
 
   - id: configure
     kind: configure
     needs: [provision]
     timeout_minutes: 20
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+      TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
+      TF_VAR_domain_name: url-shortener-app.udap.dev
     steps:
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${{ secrets.PROJECT_NAME }}/terraform.tfstate" \
+            -backend-config="region=us-east-1"
+        working-directory: infra
+      - name: Get EC2 IP
+        id: get_ip
+        run: echo "ec2_ip=$(terraform output -raw ec2_public_ip)" >> "$GITHUB_OUTPUT"
+        working-directory: infra
       - name: Install Ansible
         run: pip install ansible-core
       - name: Write SSH key
@@ -77,12 +93,12 @@ stages:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
       - name: Scan known hosts
-        run: ssh-keyscan -H "${{ needs.provision.outputs.ec2_ip }}" >> ~/.ssh/known_hosts
+        run: ssh-keyscan -H "${{ steps.get_ip.outputs.ec2_ip }}" >> ~/.ssh/known_hosts
       - name: Write inventory
         run: |
           cat > ansible/inventory.ini <<EOF
           [web]
-          ${{ needs.provision.outputs.ec2_ip }} ansible_user=${{ secrets.SSH_USER }} ansible_ssh_private_key_file=~/.ssh/deploy_key
+          ${{ steps.get_ip.outputs.ec2_ip }} ansible_user=${{ secrets.SSH_USER }} ansible_ssh_private_key_file=~/.ssh/deploy_key
           EOF
       - name: Run Ansible playbook
         env:
@@ -97,8 +113,8 @@ stages:
     steps:
       - name: Health check
         run: |
-          curl --fail --retry 10 --retry-delay 15 --retry-all-errors \
-            http://${{ needs.provision.outputs.ec2_ip }}/
+          curl --fail --retry 15 --retry-delay 20 --retry-all-errors \
+            https://url-shortener-app.udap.dev/
 
 rollback:
   strategy: manual
