@@ -1,0 +1,162 @@
+---
+- name: Configure URL Shortener on EC2
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    app_dir: /opt/url-shortener-app
+    venv_dir: /opt/url-shortener-app/venv
+    app_user: www-data
+    django_settings: url_shortener_app.settings
+
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 5
+        timeout: 120
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      retries: 5
+      delay: 10
+
+    - name: Install system packages
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - nginx
+          - git
+          - acl
+        state: present
+
+    - name: Create app directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Copy application files
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ app_dir }}/"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+        directory_mode: '0755'
+
+    - name: Create Python virtualenv and install dependencies
+      ansible.builtin.pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_command: python3 -m venv
+
+    - name: Write .env file
+      ansible.builtin.template:
+        src: env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0600'
+      no_log: true
+
+    - name: Run Django migrations
+      ansible.builtin.command:
+        cmd: "{{ venv_dir }}/bin/python manage.py migrate --noinput"
+        chdir: "{{ app_dir }}"
+      become_user: "{{ app_user }}"
+      changed_when: true
+
+    - name: Collect static files
+      ansible.builtin.command:
+        cmd: "{{ venv_dir }}/bin/python manage.py collectstatic --noinput"
+        chdir: "{{ app_dir }}"
+      become_user: "{{ app_user }}"
+      changed_when: true
+
+    - name: Write systemd service unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/url-shortener.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=URL Shortener Django App (Gunicorn)
+          After=network.target
+
+          [Service]
+          User={{ app_user }}
+          WorkingDirectory={{ app_dir }}
+          EnvironmentFile={{ app_dir }}/.env
+          ExecStart={{ venv_dir }}/bin/gunicorn url_shortener_app.wsgi:application \
+            --bind 127.0.0.1:8000 \
+            --workers 2 \
+            --timeout 60 \
+            --access-logfile /var/log/url-shortener-access.log \
+            --error-logfile /var/log/url-shortener-error.log
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Write nginx config
+      ansible.builtin.copy:
+        dest: /etc/nginx/sites-available/url-shortener
+        mode: '0644'
+        content: |
+          server {
+              listen 80 default_server;
+              server_name _;
+
+              location /static/ {
+                  alias {{ app_dir }}/staticfiles/;
+                  expires 30d;
+              }
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_read_timeout 60s;
+              }
+          }
+
+    - name: Enable nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/url-shortener
+        dest: /etc/nginx/sites-enabled/url-shortener
+        state: link
+
+    - name: Remove nginx default site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start url-shortener service
+      ansible.builtin.systemd:
+        name: url-shortener
+        enabled: true
+        state: restarted
+
+    - name: Enable and start nginx
+      ansible.builtin.systemd:
+        name: nginx
+        enabled: true
+        state: restarted
+
+    - name: Wait for app to be available on port 80
+      wait_for:
+        host: localhost
+        port: 80
+        timeout: 60

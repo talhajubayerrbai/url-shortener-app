@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Stats for /{{ obj.code }} — URL Shortener{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Stats for /{{ obj.code }}</h1>
+  <p class="subtitle">
+    Short URL: <a href="{{ short_url }}" target="_blank" rel="noopener">{{ short_url }}</a>
+  </p>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="number">{{ obj.click_count }}</div>
+      <div class="label">Total Clicks</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">{{ obj.created_at|date:"M j" }}</div>
+      <div class="label">Created Date</div>
+    </div>
+  </div>
+
+  <p><strong>Original URL:</strong><br>
+    <a href="{{ obj.original_url }}" target="_blank" rel="noopener">{{ obj.original_url }}</a>
+  </p>
+</div>
+
+<a href="/" class="btn">&larr; Shorten Another</a>
+{% endblock %}

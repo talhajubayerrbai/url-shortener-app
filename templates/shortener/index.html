@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}URL Shortener — Shorten Your Links{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Shorten a URL</h1>
+  <p class="subtitle">Paste a long link below and get a short, shareable URL instantly.</p>
+
+  <form method="post" action="/">
+    {% csrf_token %}
+    {{ form.url }}
+    {% if form.url.errors %}
+      {% for error in form.url.errors %}
+        <p class="error">{{ error }}</p>
+      {% endfor %}
+    {% endif %}
+    <button type="submit" class="btn">Shorten &rarr;</button>
+  </form>
+
+  {% if short_url %}
+  <div class="result-box">
+    <div>
+      <strong>Your short link:</strong><br>
+      <a href="{{ short_url }}" target="_blank" rel="noopener">{{ short_url }}</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if recent %}
+<div class="card">
+  <h2>Recent Links</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Short Code</th>
+        <th>Original URL</th>
+        <th>Clicks</th>
+        <th>Stats</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in recent %}
+      <tr>
+        <td><a href="/{{ item.code }}" target="_blank" rel="noopener">/{{ item.code }}</a></td>
+        <td>{{ item.original_url|truncatechars:55 }}</td>
+        <td><span class="badge">{{ item.click_count }}</span></td>
+        <td><a href="/stats/{{ item.code }}/" class="btn btn-sm">Stats</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
