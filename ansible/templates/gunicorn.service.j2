@@ -1,0 +1,19 @@
+[Unit]
+Description=URL Shortener Django App (Gunicorn)
+After=network.target
+
+[Service]
+User={{ app_user }}
+WorkingDirectory={{ app_dir }}
+EnvironmentFile={{ app_dir }}/.env
+ExecStart={{ venv_dir }}/bin/gunicorn url_shortener_app.wsgi:application \
+  --bind 127.0.0.1:8000 \
+  --workers 2 \
+  --timeout 60 \
+  --access-logfile /var/log/url-shortener-access.log \
+  --error-logfile /var/log/url-shortener-error.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

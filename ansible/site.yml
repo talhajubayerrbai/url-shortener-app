@@ -81,52 +81,20 @@
       changed_when: true
 
     - name: Write systemd service unit
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: gunicorn.service.j2
         dest: /etc/systemd/system/url-shortener.service
+        owner: root
+        group: root
         mode: '0644'
-        content: |
-          [Unit]
-          Description=URL Shortener Django App (Gunicorn)
-          After=network.target
-
-          [Service]
-          User={{ app_user }}
-          WorkingDirectory={{ app_dir }}
-          EnvironmentFile={{ app_dir }}/.env
-          ExecStart={{ venv_dir }}/bin/gunicorn url_shortener_app.wsgi:application \
-            --bind 127.0.0.1:8000 \
-            --workers 2 \
-            --timeout 60 \
-            --access-logfile /var/log/url-shortener-access.log \
-            --error-logfile /var/log/url-shortener-error.log
-          Restart=always
-          RestartSec=5
-
-          [Install]
-          WantedBy=multi-user.target
 
     - name: Write nginx config
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: nginx.conf.j2
         dest: /etc/nginx/sites-available/url-shortener
+        owner: root
+        group: root
         mode: '0644'
-        content: |
-          server {
-              listen 80 default_server;
-              server_name _;
-
-              location /static/ {
-                  alias {{ app_dir }}/staticfiles/;
-                  expires 30d;
-              }
-
-              location / {
-                  proxy_pass http://127.0.0.1:8000;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_read_timeout 60s;
-              }
-          }
 
     - name: Enable nginx site
       ansible.builtin.file:
