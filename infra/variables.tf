@@ -15,8 +15,3 @@ variable "secret_key" {
   sensitive   = true
   default     = ""
 }
-
-variable "domain_name" {
-  description = "Fully-qualified domain name for the app (e.g. url-shortener-app.udap.dev)"
-  type        = string
-}

@@ -5,13 +5,8 @@ vpc: Default VPC {
   alb: Load Balancer (ALB) { shape: rectangle; udap-type: aws.alb }
   ec2: Web Server (EC2 t3.micro) { shape: rectangle; udap-type: aws.ec2 }
 }
-acm: ACM Certificate\n(url-shortener-app.udap.dev) { shape: rectangle; udap-type: aws.s3 }
-r53: Route 53\n(url-shortener-app.udap.dev) { shape: rectangle; udap-type: aws.s3 }
 
-user -> r53: DNS lookup
-r53 -> vpc.alb: Alias A record
-user -> vpc.alb: HTTPS :443
+user -> vpc.alb: HTTP :80
 vpc.alb -> vpc.ec2: HTTP :8000
 vpc.ec2 -> vpc.ec2: Django App\n(Gunicorn :8000)
 vpc.ec2 -> vpc.ec2: SQLite DB\n(local file)
-acm -> vpc.alb: TLS cert

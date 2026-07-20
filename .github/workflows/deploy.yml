@@ -43,7 +43,6 @@ jobs:
       TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
-      TF_VAR_domain_name: url-shortener-app.udap.dev
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
@@ -68,7 +67,6 @@ jobs:
       TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
-      TF_VAR_domain_name: url-shortener-app.udap.dev
     timeout-minutes: 20
     steps:
     - uses: actions/checkout@v4
@@ -108,9 +106,7 @@ jobs:
 
         '
     - name: Run Ansible playbook
-      run: 'ansible-playbook -i ansible/inventory.ini ansible/site.yml
-
-        '
+      run: ansible-playbook -i ansible/inventory.ini ansible/site.yml
       env:
         DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
   verify:
@@ -118,8 +114,27 @@ jobs:
     needs:
     - provision
     - configure
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+      TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+    - name: Terraform Init
+      run: "terraform init -input=false -reconfigure \\\n  -backend-config=\"bucket=${{\
+        \ secrets.TF_STATE_BUCKET }}\" \\\n  -backend-config=\"key=${{ secrets.PROJECT_NAME\
+        \ }}/terraform.tfstate\" \\\n  -backend-config=\"region=us-east-1\"\n"
+      working-directory: infra
+    - id: get_alb
+      name: Get ALB DNS
+      run: echo "alb_dns=$(terraform output -raw alb_dns_name)" >> "$GITHUB_OUTPUT"
+      working-directory: infra
     - name: Health check
-      run: "curl --fail --retry 15 --retry-delay 20 --retry-all-errors \\\n  https://url-shortener-app.udap.dev/\n"
+      run: "curl --fail --retry 15 --retry-delay 20 --retry-all-errors \\\n  \"http://${{\
+        \ steps.get_alb.outputs.alb_dns }}/\"\n"

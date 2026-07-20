@@ -9,6 +9,6 @@ output "ec2_instance_id" {
 }
 
 output "alb_dns_name" {
-  description = "ALB DNS name (internal AWS hostname)"
+  description = "ALB DNS name — access the app at http://<alb_dns_name>"
   value       = aws_lb.main.dns_name
 }

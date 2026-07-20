@@ -13,7 +13,6 @@ jobs:
       TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
       TF_VAR_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
-      TF_VAR_domain_name: url-shortener-app.udap.dev
     steps:
     - uses: actions/checkout@v4
     - uses: hashicorp/setup-terraform@v3

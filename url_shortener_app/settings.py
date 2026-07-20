@@ -7,14 +7,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-in-prod')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get(
-    'ALLOWED_HOSTS',
-    'url-shortener-app.udap.dev,localhost,127.0.0.1'
-).split(',')
-
-# Trust the X-Forwarded-Proto header set by the ALB so Django knows the
-# request arrived over HTTPS even though Gunicorn sees plain HTTP internally.
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
