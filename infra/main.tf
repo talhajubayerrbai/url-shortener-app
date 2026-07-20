@@ -64,6 +64,10 @@ resource "aws_security_group" "alb" {
     Project   = var.project_name
     ManagedBy = "udap"
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "web" {
@@ -97,6 +101,10 @@ resource "aws_security_group" "web" {
   tags = {
     Project   = var.project_name
     ManagedBy = "udap"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
