@@ -10,10 +10,12 @@ ExecStart={{ venv_dir }}/bin/gunicorn url_shortener_app.wsgi:application \
   --bind 127.0.0.1:8000 \
   --workers 2 \
   --timeout 60 \
-  --access-logfile /var/log/url-shortener-access.log \
-  --error-logfile /var/log/url-shortener-error.log
+  --access-logfile - \
+  --error-logfile -
 Restart=always
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
