@@ -31,6 +31,7 @@
           - python3-pip
           - git
           - acl
+          - libpq-dev
         state: present
 
     - name: Create app directory
@@ -64,6 +65,13 @@
         group: "{{ app_user }}"
         mode: '0600'
       no_log: true
+
+    - name: Wait for RDS to be reachable on port 5432
+      wait_for:
+        host: "{{ rds_host }}"
+        port: 5432
+        timeout: 120
+        delay: 5
 
     - name: Run Django migrations
       ansible.builtin.command:

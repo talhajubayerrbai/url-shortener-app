@@ -4,9 +4,10 @@ user: User { shape: rectangle; udap-type: generic.user }
 vpc: Default VPC {
   alb: Load Balancer (ALB) { shape: rectangle; udap-type: aws.alb }
   ec2: Web Server (EC2 t3.micro) { shape: rectangle; udap-type: aws.ec2 }
+  rds: Database (RDS PostgreSQL 17) { shape: rectangle; udap-type: aws.rds }
 }
 
 user -> vpc.alb: HTTP :80
 vpc.alb -> vpc.ec2: HTTP :8000
 vpc.ec2 -> vpc.ec2: Django App\n(Gunicorn :8000)
-vpc.ec2 -> vpc.ec2: SQLite DB\n(local file)
+vpc.ec2 -> vpc.rds: PostgreSQL :5432

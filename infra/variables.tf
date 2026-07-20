@@ -15,3 +15,9 @@ variable "secret_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "db_password" {
+  description = "RDS master user password"
+  type        = string
+  sensitive   = true
+}
