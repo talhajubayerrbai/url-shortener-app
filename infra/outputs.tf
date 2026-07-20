@@ -12,8 +12,3 @@ output "alb_dns_name" {
   description = "ALB DNS name (internal AWS hostname)"
   value       = aws_lb.main.dns_name
 }
-
-output "app_url" {
-  description = "Public HTTPS URL of the application"
-  value       = "https://${var.domain_name}"
-}
