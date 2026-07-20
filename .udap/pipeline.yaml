@@ -45,7 +45,7 @@ stages:
       TF_VAR_domain_name: url-shortener-app.udap.dev
     steps:
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
       - name: Terraform Init
         run: |
           terraform init -input=false -reconfigure \
@@ -71,7 +71,7 @@ stages:
       TF_VAR_domain_name: url-shortener-app.udap.dev
     steps:
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v2
       - name: Terraform Init
         run: |
           terraform init -input=false -reconfigure \
