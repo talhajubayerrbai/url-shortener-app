@@ -61,6 +61,15 @@ stages:
             -backend-config="key=${{ secrets.PROJECT_NAME }}/terraform.tfstate" \
             -backend-config="region=us-east-1"
         working-directory: infra
+      - name: Import existing RDS if state-drift
+        run: |
+          if ! terraform state show aws_db_instance.main > /dev/null 2>&1; then
+            echo "aws_db_instance.main not in state — importing..."
+            terraform import -input=false aws_db_instance.main "${{ secrets.PROJECT_NAME }}-db" || echo "Import returned non-zero (instance may not exist yet — OK)"
+          else
+            echo "aws_db_instance.main already in state — skipping import"
+          fi
+        working-directory: infra
       - name: Terraform Apply
         run: terraform apply -input=false -auto-approve
         working-directory: infra

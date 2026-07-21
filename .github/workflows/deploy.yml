@@ -62,6 +62,14 @@ jobs:
         \ secrets.TF_STATE_BUCKET }}\" \\\n  -backend-config=\"key=${{ secrets.PROJECT_NAME\
         \ }}/terraform.tfstate\" \\\n  -backend-config=\"region=us-east-1\"\n"
       working-directory: infra
+    - name: Import existing RDS if state-drift
+      run: "if ! terraform state show aws_db_instance.main > /dev/null 2>&1; then\n\
+        \  echo \"aws_db_instance.main not in state \u2014 importing...\"\n  terraform\
+        \ import -input=false aws_db_instance.main \"${{ secrets.PROJECT_NAME }}-db\"\
+        \ || echo \"Import returned non-zero (instance may not exist yet \u2014 OK)\"\
+        \nelse\n  echo \"aws_db_instance.main already in state \u2014 skipping import\"\
+        \nfi\n"
+      working-directory: infra
     - name: Terraform Apply
       run: terraform apply -input=false -auto-approve
       working-directory: infra
